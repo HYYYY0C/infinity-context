@@ -86,70 +86,100 @@ def status(messages: int, threshold: float, model: str):
               type=click.Choice(["default", "minimal", "detailed"]),
               help="摘要模板")
 @click.option("--input", "-i", "input_data", 
-              help="JSON 格式的关键信息，例如：'{\"core_tasks\": [\"任务 A\"], \"pending_tasks\": [\"待办 B\"]}'")
+              help="JSON 格式的关键信息")
 @click.option("--file", "-f", "input_file", 
               type=click.Path(exists=True),
-              help="从文件读取对话历史或关键信息（JSON 格式）")
-@click.option("--auto", "-a", is_flag=True, help="自动执行切换（实验性）")
-def compress(template: str, input_data: Optional[str], input_file: Optional[str], auto: bool):
+              help="从文件读取")
+@click.option("--auto", "-a", is_flag=True, help="自动执行切换")
+@click.option("--interactive", "-I", is_flag=True, help="交互式输入")
+@click.option("--llm", is_flag=True, help="使用 LLM 自动生成（推荐）")
+def compress(template: str, input_data: Optional[str], input_file: Optional[str], 
+             auto: bool, interactive: bool, llm: bool):
     """📝 压缩对话并切换到新 session
     
-    ⚠️  当前版本需要用户提供关键信息，因为 Hermes 没有开放对话历史 API。
-    
-    使用方式:
-    
-      1. 手动输入关键信息:
-         hermes-rotator compress --input '{"core_tasks": ["开发功能 A"], "pending_tasks": ["测试"]}'
-      
-      2. 从文件读取:
-         hermes-rotator compress --file conversation.json
-      
-      3. 不提供数据（仅查看说明）:
-         hermes-rotator compress
-    
-    JSON 文件格式示例:
-    {
-      "core_tasks": [
-        {"task": "开发用户认证模块", "status": "✅", "result": "完成"}
-      ],
-      "modified_files": ["src/auth.py", "tests/test_auth.py"],
-      "pending_tasks": ["完成测试", "更新文档"],
-      "important_context": {
-        "Python 版本": "3.11",
-        "框架": "FastAPI"
-      },
-      "next_steps": ["运行测试", "提交 PR"]
-    }
+    三种方式:
+      1. LLM 自动生成：compress --llm
+      2. 交互式输入：compress --interactive  
+      3. 手动 JSON: compress --input '{...}'
     """
     summarizer = SmartSummarizer(template=template)
     
     # 尝试获取关键信息
     key_info = None
     
-    if input_data:
-        # 从命令行参数读取
+    # 方式 1: LLM 自动生成
+    if llm:
+        click.echo("\n🤖 使用 LLM 自动生成摘要...\n")
         try:
-            key_info = json.loads(input_data)
-            click.echo("✅ 已从 --input 参数读取关键信息")
-        except json.JSONDecodeError as e:
-            click.echo(f"❌ JSON 格式错误：{e}", err=True)
-            click.echo("\n💡 示例:")
-            click.echo("   --input '{\"core_tasks\": [\"任务 A\"], \"pending_tasks\": [\"待办 B\"]}'")
-            sys.exit(1)
-    
-    elif input_file:
-        # 从文件读取
-        try:
-            file_path = Path(input_file)
-            content = file_path.read_text(encoding='utf-8')
-            key_info = json.loads(content)
-            click.echo(f"✅ 已从文件读取关键信息：{input_file}")
-        except json.JSONDecodeError as e:
-            click.echo(f"❌ 文件 JSON 格式错误：{e}", err=True)
-            sys.exit(1)
+            from hermes_tools import delegate_task
+            
+            prompt = """请为当前对话生成结构化 JSON 摘要：
+{
+  "core_tasks": [{"task": "任务", "status": "✅"}],
+  "modified_files": ["文件 1"],
+  "pending_tasks": ["待办 1"],
+  "important_context": {"key": "value"},
+  "next_steps": ["下一步"]
+}
+只输出 JSON。"""
+            
+            result = delegate_task(goal="生成摘要", context=prompt, role="leaf")
+            
+            if result and len(result) > 0:
+                key_info = result[0]
+                click.echo("✅ LLM 摘要生成成功！\n")
+            else:
+                click.echo("⚠️  LLM 返回为空\n")
         except Exception as e:
-            click.echo(f"❌ 读取文件失败：{e}", err=True)
-            sys.exit(1)
+            click.echo(f"⚠️  LLM 失败：{e}\n")
+    
+    # 方式 2: 交互式输入
+    if interactive and not key_info:
+        click.echo("\n📝 交互式输入\n")
+        
+        tasks = click.prompt("1️⃣ 完成的任务（逗号分隔）", default="", show_default=False)
+        files = click.prompt("2️⃣ 修改的文件（逗号分隔）", default="", show_default=False)
+        pending = click.prompt("3️⃣ 待办事项（逗号分隔）", default="", show_default=False)
+        
+        click.echo("\n4️⃣ 重要上下文（key=value，空行结束）:")
+        context = {}
+        while True:
+            line = click.prompt("   ", default="")
+            if not line:
+                break
+            if "=" in line:
+                k, v = line.split("=", 1)
+                context[k.strip()] = v.strip()
+        
+        next_steps = click.prompt("\n5️⃣ 下一步（逗号分隔）", default="", show_default=False)
+        
+        key_info = {
+            "core_tasks": [{"task": t.strip(), "status": "✅"} for t in tasks.split(",") if t.strip()],
+            "modified_files": [f.strip() for f in files.split(",") if f.strip()],
+            "pending_tasks": [p.strip() for p in pending.split(",") if p.strip()],
+            "important_context": context,
+            "next_steps": [n.strip() for n in next_steps.split(",") if n.strip()]
+        }
+        click.echo("\n✅ 已收集信息\n")
+    
+    # 方式 3: 从参数/文件读取
+    elif not key_info:
+        if input_data:
+            try:
+                key_info = json.loads(input_data)
+                click.echo("✅ 已从 --input 读取")
+            except json.JSONDecodeError as e:
+                click.echo(f"❌ JSON 错误：{e}", err=True)
+                sys.exit(1)
+        
+        elif input_file:
+            try:
+                content = Path(input_file).read_text(encoding='utf-8')
+                key_info = json.loads(content)
+                click.echo(f"✅ 已从文件读取：{input_file}")
+            except Exception as e:
+                click.echo(f"❌ 读取失败：{e}", err=True)
+                sys.exit(1)
     
     # 创建 rotator 并执行
     rotator = SessionRotator(summarizer=summarizer)
