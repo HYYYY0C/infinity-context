@@ -145,13 +145,23 @@ class LLMSummarizer:
         """
         调用 LLM API
         
-        自动检测并使用配置的 API：
-        1. 如果有 OPENAI_API_KEY，使用 OpenAI
-        2. 如果有 ANTHROPIC_API_KEY，使用 Anthropic
-        3. 如果本地有 Ollama，使用 Ollama
-        4. 否则使用模拟响应（测试用）
+        自动检测并使用可用的 API（优先级从高到低）：
+        1. 使用当前 Hermes Agent 的 API（如果可用）
+        2. 如果有 OPENAI_API_KEY，使用 OpenAI
+        3. 如果有 ANTHROPIC_API_KEY，使用 Anthropic
+        4. 如果本地有 Ollama，使用 Ollama
+        5. 否则使用模拟响应（测试用）
         """
         import os
+        
+        # 方案 0: 尝试使用当前 Hermes Agent 的 API
+        # 通过调用 Hermes 的工具来生成摘要
+        try:
+            print("💡 尝试使用当前 Hermes Agent 的 API...")
+            return self._call_hermes_agent(user_prompt)
+        except Exception as e:
+            print(f"⚠️  Hermes Agent API 不可用：{str(e)}")
+            print("   尝试其他 API...\n")
         
         # 方案 1: 检测 OpenAI API Key
         if os.getenv("OPENAI_API_KEY"):
@@ -186,6 +196,66 @@ class LLMSummarizer:
         print("💡 未检测到 API 配置，使用模拟响应（测试模式）")
         print("   配置 OPENAI_API_KEY 或 ANTHROPIC_API_KEY 以启用真实 LLM\n")
         return self._mock_response()
+    
+    def _call_hermes_agent(self, user_prompt: str) -> str:
+        """
+        通过 delegate_task 让当前 Hermes Agent 生成摘要
+        
+        这是最智能的方式：直接使用当前会话的模型和 API
+        无需额外配置，自动继承 Hermes 的设置
+        
+        注意：这个方法需要在 Hermes Agent 环境中运行
+        """
+        try:
+            # 尝试导入 delegate_task
+            from hermes_tools import delegate_task
+            
+            print("   🤖 委托给当前 Hermes Agent 生成摘要...")
+            
+            # 构建摘要任务
+            summary_prompt = f"""请为以下对话生成一个结构化的 JSON 摘要：
+
+{user_prompt[:3000]}
+
+请严格按照以下 JSON 格式输出（不要有其他文字）：
+{{
+  "summary": "一段话总结（100-200 字）",
+  "key_points": ["关键点 1", "关键点 2", "关键点 3"],
+  "action_items": ["待办 1", "待办 2"],
+  "context": {{"技术": "...", "决策": "..."}},
+  "next_steps": "下一步建议（50-100 字）",
+  "confidence": 0.95
+}}
+"""
+            
+            # 委托给子代理（使用当前模型）
+            result = delegate_task(
+                goal="生成对话摘要",
+                context=summary_prompt,
+                role="leaf"
+            )
+            
+            # 等待结果（delegate_task 是同步的）
+            if result and len(result) > 0:
+                # 提取摘要文本
+                summary_text = result[0].get("summary", "")
+                if summary_text:
+                    # 构建完整的 JSON 响应
+                    return json.dumps({
+                        "summary": summary_text,
+                        "key_points": result[0].get("key_points", []),
+                        "action_items": result[0].get("action_items", []),
+                        "context": result[0].get("context", {}),
+                        "next_steps": result[0].get("next_steps", ""),
+                        "confidence": result[0].get("confidence", 0.9)
+                    }, ensure_ascii=False)
+            
+            raise RuntimeError("delegate_task 返回为空")
+            
+        except ImportError:
+            raise RuntimeError("不在 Hermes Agent 环境中（hermes_tools 不可用）")
+        except Exception as e:
+            raise RuntimeError(f"delegate_task 调用失败：{str(e)}")
     
     def _call_openai(self, prompt: str) -> str:
         """调用 OpenAI API"""
