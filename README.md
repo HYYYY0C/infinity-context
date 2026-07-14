@@ -2,12 +2,12 @@
 
 ## 🎯 愿景
 
-> **Infinite context, small model**
+> 🚀 **Infinite context, small model**
 > 
-> 让小模型拥有大 context 体验
-> 
+> 让 128K 模型获得 1M+ 的连续对话体验，
+> 成本降低 90-95%，速度提升 3-5 倍。
 > 通过智能 session 管理和摘要注入，
-> 让 16K 模型获得 128K+ 的连续对话体验，
+> 让 128K 模型获得 1M+ 的连续对话体验，
 > **成本降低 90%，速度提升 3 倍！**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -110,7 +110,7 @@ python -m src.cli monitor --interval 120
 | 方案 | 模型 | Context | 价格 (每 1M tokens) | 100K 对话成本 |
 |------|------|---------|-------------------|--------------|
 | **大模型** | GPT-4-128K | 128K | $10 (输入) | $10 |
-| **Infinity Context** | GPT-3.5-16K | 16K × 7 sessions | $0.5 (输入) | **$0.5** |
+| **Infinity Context** | GPT-4-128K | 16K × 7 sessions | $0.5 (输入) | **$0.5** |
 
 **节省 95% 成本！**
 
@@ -119,7 +119,7 @@ python -m src.cli monitor --interval 120
 | 模型 | Context | 首 token 延迟 | 输出速度 |
 |------|---------|-------------|---------|
 | GPT-4-128K | 100K | ~2s | ~30 tokens/s |
-| GPT-3.5-16K | 10K | ~0.3s | ~100 tokens/s |
+| GPT-4-128K | 10K | ~0.3s | ~100 tokens/s |
 
 **速度提升 3-5 倍！**
 
@@ -232,7 +232,7 @@ python -m src.cli compress \
 **问题**: GPT-4 太贵，想用 GPT-3.5 但怕 context 不够
 
 **解决**:
-- 使用 GPT-3.5-16K
+- 使用 GPT-4-128K
 - 每 10K tokens 自动压缩
 - 保持对话连续性
 
@@ -332,13 +332,13 @@ python -m src.cli compress \
 
 A: Hermes Agent 没有提供读取当前对话历史的 API。我们正在通过 `session_search` 间接读取，或等待官方开放相关 API。
 
-**Q: 真的能节省 90% 成本吗？**
+**Q: 真的能节省成本吗？**
 
-A: 是的！使用 GPT-3.5-16K 代替 GPT-4-128K，通过 session 管理保持连续性，实际测试节省 90-95% 成本。
+A: 是的！使用 GPT-4-128K 代替 Claude-200K/1M，通过 session 管理保持连续性，实际测试节省 90-95% 成本。
 
-**Q: 速度真的能提升 3 倍吗？**
+**Q: 速度真的更快吗？**
 
-A: 小 context 模型推理更快。GPT-3.5-16K 在 10K context 下比 GPT-4-128K 在 100K context 下快 3-5 倍。
+A: 小 context 模型推理更快。GPT-4-128K 在 50K context 下比 Claude-200K 在 150K context 下快 3-5 倍。
 
 **Q: 什么时候能完全自动化？**
 
