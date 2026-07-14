@@ -38,7 +38,11 @@ cd session-rotation
 bash deploy.sh
 ```
 
-**就这么简单！** 无需配置，无需手动操作。
+**就这么简单！** 
+- ✅ 无需 Python 依赖
+- ✅ 无需 hermes_tools
+- ✅ 纯终端命令
+- ✅ 完全自动化
 
 ---
 
