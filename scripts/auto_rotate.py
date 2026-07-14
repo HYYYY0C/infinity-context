@@ -1,45 +1,122 @@
 #!/usr/bin/env python3
 """
-🔄 Infinity Context v1.0.0 - 极简版
+🔄 Infinity Context v1.1.0 - 支持小模型
 
-**唯一目标**: 小模型，长上下文
+**目标**: 小模型，长上下文
+
+自动检测模型并调整 Context 限制，支持从 4K 到 200K 的所有模型！
 """
 
 import sys
+import os
 import time
-from typing import TYPE_CHECKING
+import tiktoken
+import json
+import re
+from typing import Dict, List
+from pathlib import Path
 
-if TYPE_CHECKING:
-    from hermes_tools import session_search, terminal, send_message, computer_use
+# 条件导入 Hermes 工具
+if sys.modules.get('hermes_tools'):
+    from hermes_tools import session_search, send_message, computer_use, delegate_task
 else:
     try:
-        from hermes_tools import session_search, terminal, send_message, computer_use
+        from hermes_tools import session_search, send_message, computer_use, delegate_task
     except ImportError:
         session_search = None
-        terminal = None
         send_message = None
         computer_use = None
+        delegate_task = None
+
+# ========== 模型配置 ==========
+MODEL_CONFIGS: Dict[str, Dict] = {
+    # OpenAI
+    "gpt-3.5-turbo": {"limit": 16385, "encoding": "cl100k_base"},
+    "gpt-4-turbo": {"limit": 128000, "encoding": "cl100k_base"},
+    "gpt-4o": {"limit": 128000, "encoding": "cl100k_base"},
+    
+    # Anthropic
+    "claude-3-haiku": {"limit": 200000, "encoding": "cl100k_base"},
+    "claude-3-sonnet": {"limit": 200000, "encoding": "cl100k_base"},
+    "claude-3-opus": {"limit": 200000, "encoding": "cl100k_base"},
+    "claude-sonnet-4": {"limit": 200000, "encoding": "cl100k_base"},
+    
+    # Meta Llama
+    "llama-3-8b": {"limit": 8192, "encoding": "cl100k_base"},
+    "llama-3-70b": {"limit": 8192, "encoding": "cl100k_base"},
+    
+    # Mistral
+    "mistral-7b": {"limit": 8192, "encoding": "cl100k_base"},
+    "mistral-medium": {"limit": 32000, "encoding": "cl100k_base"},
+    
+    # Microsoft Phi
+    "phi-3-mini": {"limit": 4096, "encoding": "cl100k_base"},
+    "phi-3-medium": {"limit": 128000, "encoding": "cl100k_base"},
+    
+    # 默认
+    "default": {"limit": 128000, "encoding": "cl100k_base"},
+}
+
+def get_model_config(model_name: str) -> Dict:
+    """获取模型配置"""
+    # 不要替换 - 和 . ，直接用小写匹配
+    normalized = model_name.lower()
+    
+    # 1. 精确匹配
+    if normalized in MODEL_CONFIGS:
+        return MODEL_CONFIGS[normalized]
+    
+    # 2. 检查是否包含已知模型的关键词
+    for key, config in MODEL_CONFIGS.items():
+        if key == "default":  # 跳过默认值
+            continue
+        if key in normalized or normalized in key:
+            return config
+    
+    # 3. 返回默认
+    return MODEL_CONFIGS["default"]
 
 
 def check_and_rotate():
-    """检查并自动切换 - 极简版"""
+    """检查并自动切换 - 支持小模型"""
     
     if session_search is None:
         print("❌ 请在 Hermes 环境中运行")
         return
     
-    print("🔄 Infinity Context - 自动检查")
+    # 1. 获取当前模型
+    model_name = os.getenv("LLM_MODEL", "claude-sonnet-4")
+    config = get_model_config(model_name)
     
+    TOKEN_LIMIT = config["limit"]
+    ENCODING = config["encoding"]
+    
+    print(f"🔄 Infinity Context v1.1.0 - 自动检查")
+    print(f"📊 使用模型：{model_name}")
+    print(f"   Context 限制：{TOKEN_LIMIT:,} tokens")
+    
+    # 2. 动态调整阈值（Hermes 最小支持 64K，以下为小模型）
+    if TOKEN_LIMIT < 64000:  # <64K 算小模型（Hermes 原生不支持）
+        USAGE_THRESHOLD = 0.7  # 小模型：70%
+        RECENT_MESSAGES = 10   # 只保留最近 10 轮
+        print(f"   触发阈值：70% ({TOKEN_LIMIT * 0.7:,.0f} tokens)")
+        print(f"   🐜 小模型模式：启用（Hermes 原生不支持）")
+    else:
+        USAGE_THRESHOLD = 0.8  # 大模型：80%
+        RECENT_MESSAGES = 50
+        print(f"   触发阈值：80% ({TOKEN_LIMIT * 0.8:,.0f} tokens)")
+    
+    # 3. 获取会话
     try:
         recent = session_search(limit=1)
-        messages = session_search(session_id=recent.id, window=100)
+        messages = session_search(session_id=recent.id, window=RECENT_MESSAGES)
     except Exception as e:
         print(f"❌ 无法读取会话：{e}")
         return
-    # 使用 tiktoken 准确计算 Token
+    
+    # 4. 计算 Token
     try:
-        import tiktoken
-        encoding = tiktoken.get_encoding("cl100k_base")
+        encoding = tiktoken.get_encoding(ENCODING)
         total_tokens = sum(len(encoding.encode(m.get('content', ''))) for m in messages)
     except ImportError:
         print("⚠️  tiktoken 未安装，使用估算（误差较大）")
@@ -48,42 +125,47 @@ def check_and_rotate():
         print(f"⚠️  Token 计算失败：{e}")
         total_tokens = sum(len(m.get('content', '')) for m in messages) // 4
     
-    usage_rate = total_tokens / 128000
+    usage_rate = total_tokens / TOKEN_LIMIT
     
-    print(f"📊 使用率：{usage_rate:.1%} ({total_tokens:,} tokens)")
+    print(f"📈 当前使用：{total_tokens:,} tokens ({usage_rate:.1%})")
     
-    if usage_rate < 0.8:
+    # 5. 检查阈值
+    if usage_rate < USAGE_THRESHOLD:
         print("✅ 使用率正常")
         return
     
-    print("⚠️  使用率超过 80%，执行切换...")
+    print(f"⚠️  使用率超过 {USAGE_THRESHOLD:.0%}，执行切换...")
     
-    # 生成真正的 LLM 摘要
+    # 6. 生成摘要（根据模型大小调整）
     print("📝 生成摘要...")
     try:
-        from hermes_tools import delegate_task
-        import json, re
-        
-        # 提取最近 50 轮对话
-        recent = messages[-50:]
+        # 提取最近对话
+        recent = messages[-RECENT_MESSAGES:]
         conversation = "\n".join([f"{m.get('role', 'unknown')}: {m.get('content', '')}" for m in recent])
         
-        # 调用 LLM 生成结构化摘要
+        # 根据模型大小调整摘要复杂度
+        if TOKEN_LIMIT < 32000:
+            # 小模型：精简摘要
+            goal = "提取 3 个关键点，50 字以内"
+        else:
+            # 大模型：结构化摘要
+            goal = "生成结构化摘要（JSON 格式），包含 summary, key_points, action_items"
+        
         result = delegate_task(
-            goal="生成结构化摘要（JSON 格式）",
-            context=f"分析以下对话，提取关键信息：\n\n{conversation[:20000]}"
+            goal=goal,
+            context=f"分析以下对话：\n\n{conversation[:20000]}"
         )
         
-        # 解析 JSON
+        # 解析 JSON（如果是结构化摘要）
         json_match = re.search(r'\{.*\}', result, re.DOTALL)
-        if json_match:
-            summary_data = json.loads(json_match.group())
-            summary_text = summary_data.get('summary', '摘要生成成功')
-            key_points = summary_data.get('key_points', [])
-            action_items = summary_data.get('action_items', [])
-            
-            # 格式化摘要
-            summary_text = f"""
+        if json_match and TOKEN_LIMIT >= 32000:
+            try:
+                summary_data = json.loads(json_match.group())
+                summary_text = summary_data.get('summary', '摘要生成成功')
+                key_points = summary_data.get('key_points', [])
+                action_items = summary_data.get('action_items', [])
+                
+                summary_text = f"""
 **摘要**: {summary_text}
 
 **关键点**:
@@ -92,12 +174,17 @@ def check_and_rotate():
 **待办**:
 {chr(10).join('• ' + str(t) for t in action_items[:5])}
 """.strip()
+            except:
+                summary_text = result
         else:
-            summary_text = f"会话摘要：共 {len(messages)} 轮对话（LLM 解析失败）"
+            # 小模型或解析失败：使用原始结果
+            summary_text = result
+            
     except Exception as e:
         print(f"⚠️  摘要生成失败：{e}")
         summary_text = f"会话摘要：共 {len(messages)} 轮对话（降级模式）"
     
+    # 7. 执行 /new
     print("✍️  执行 /new...")
     try:
         computer_use.click_element("输入框")
@@ -110,10 +197,19 @@ def check_and_rotate():
         print("💡 请手动执行：/new")
         return
     
+    # 8. 注入摘要
     print("💉 注入摘要...")
-    send_message(f"📋 **已自动恢复上下文**\n\n{summary_text}\n\n我们可以继续了！")
-    
-    print("✅ 切换完成")
+    try:
+        send_message(f"""
+📋 **已自动恢复上下文**
+
+{summary_text}
+
+我们可以继续了！
+""")
+        print("✅ 切换完成")
+    except Exception as e:
+        print(f"❌ 注入失败：{e}")
 
 
 if __name__ == "__main__":

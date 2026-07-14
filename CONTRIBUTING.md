@@ -1,371 +1,293 @@
 # 🤝 贡献指南
 
-欢迎为 **Infinity Context** 做贡献！🎉
+**欢迎为 Infinity Context 做出贡献！**
 
 ---
 
-## 🚀 快速开始
+## 🎯 如何贡献
 
-### 1. Fork 仓库
+### **1. 报告问题**
 
-点击右上角的 "Fork" 按钮。
+发现 Bug？有功能建议？
 
-### 2. 克隆仓库
+- 📝 [创建 Issue](https://github.com/HYYYY0C/infinity-context/issues/new)
+- 📋 提供详细信息：
+  - 问题描述
+  - 重现步骤
+  - 预期行为
+  - 实际行为
+  - 环境信息（Python 版本、Hermes 版本等）
 
+### **2. 提交代码**
+
+#### **Fork 项目**
 ```bash
+# 1. Fork 项目
+# 2. Clone 到本地
 git clone https://github.com/YOUR_USERNAME/infinity-context.git
 cd infinity-context
-```
 
-### 3. 创建分支
-
-```bash
+# 3. 创建分支
 git checkout -b feature/your-feature-name
 ```
 
-### 4. 安装开发依赖
-
+#### **开发**
 ```bash
+# 安装开发依赖
 pip install -r requirements.txt
-pip install pytest pytest-cov black flake8
+pip install pytest pytest-cov flake8 black mypy
+
+# 运行测试（确保通过）
+bash run_tests.sh
+
+# 运行代码检查
+flake8 scripts/ tests/
+black scripts/ tests/
+mypy scripts/ --ignore-missing-imports
 ```
 
----
-
-## 💡 可以贡献什么？
-
-### 代码类
-
-- ✅ 新功能实现
-- ✅ Bug 修复
-- ✅ 性能优化
-- ✅ 单元测试
-- ✅ 代码重构
-
-### 文档类
-
-- ✅ README 改进
-- ✅ 教程和示例
-- ✅ 翻译（多语言支持）
-- ✅ 常见问题解答
-
-### 社区类
-
-- ✅ 报告 Bug
-- ✅ 提出功能建议
-- ✅ 分享使用案例
-- ✅ 帮助回答 Issues
-
----
-
-## 📝 开发流程
-
-### 1. 开发新功能
-
-```python
-# src/your_feature.py
-def your_new_feature():
-    """
-    清晰的功能说明
-    
-    Args:
-        param1: 参数说明
-    
-    Returns:
-        返回值说明
-    """
-    pass
-```
-
-### 2. 编写测试
-
-```python
-# tests/test_your_feature.py
-def test_your_feature():
-    result = your_new_feature()
-    assert result == expected_value
-```
-
-### 3. 代码格式化
-
+#### **提交**
 ```bash
-# 使用 black 格式化代码
-black src/ tests/
-
-# 使用 flake8 检查代码风格
-flake8 src/ tests/
-```
-
-### 4. 运行测试
-
-```bash
-# 运行所有测试
-pytest tests/ -v
-
-# 查看测试覆盖率
-pytest tests/ --cov=src --cov-report=html
-```
-
-### 5. 提交代码
-
-```bash
+# 提交更改
 git add .
 git commit -m "feat: 添加你的功能
 
-- 功能描述 1
-- 功能描述 2
-- 功能描述 3
+- 详细描述你的改动
+- 关联 Issue（如果有）
+- 说明测试情况"
 
-Closes #123"
-```
-
-### 6. 推送并创建 PR
-
-```bash
+# 推送到 GitHub
 git push origin feature/your-feature-name
 ```
 
-然后在 GitHub 上创建 Pull Request。
+#### **创建 Pull Request**
+- 📝 填写 PR 描述
+- ✅ 确保所有测试通过
+- 🔗 关联相关 Issue
+- 👀 等待代码审查
 
 ---
 
 ## 📋 代码规范
 
-### 命名规范
+### **Python 代码风格**
 
-- **文件名**: 小写，下划线分隔 (`your_file.py`)
-- **函数名**: 小写，下划线分隔 (`your_function()`)
-- **类名**: 驼峰命名 (`YourClass`)
-- **常量**: 大写，下划线分隔 (`MAX_VALUE = 100`)
-
-### 文档字符串
-
-所有公共函数和类必须有文档字符串：
+遵循 [PEP 8](https://pep8.org/) 规范：
 
 ```python
-def compress_context(messages: list, template: str = "default") -> dict:
-    """
-    压缩对话上下文生成摘要
-    
-    Args:
-        messages: 对话消息列表
-        template: 摘要模板名称 (default: "default")
-    
-    Returns:
-        包含摘要的字典
-    
-    Raises:
-        ValueError: 当模板不存在时
-    """
-    pass
+# ✅ 好的命名
+def check_and_rotate():
+    """检查并自动切换"""
+    total_tokens = calculate_tokens(messages)
+    if usage_rate > 0.8:
+        generate_summary()
+
+# ❌ 避免的命名
+def check():  # 太模糊
+    t = calculate(m)  # 缩写
 ```
 
-### 类型注解
+### **类型注解**
 
-使用 Python 类型注解：
+鼓励使用类型注解：
 
 ```python
 from typing import List, Dict, Optional
 
-def process_messages(
-    messages: List[Dict],
-    max_tokens: Optional[int] = None
-) -> Dict:
-    pass
+def extract_messages(
+    session_id: str,
+    limit: int = 100
+) -> List[Dict[str, str]]:
+    """提取会话消息"""
+    ...
+```
+
+### **文档字符串**
+
+所有公共函数必须有文档字符串：
+
+```python
+def generate_summary(messages: List[Dict]) -> str:
+    """
+    生成会话摘要
+    
+    Args:
+        messages: 会话消息列表
+        
+    Returns:
+        结构化的摘要文本
+        
+    Raises:
+        ValueError: 当消息列表为空时
+    """
+    ...
 ```
 
 ---
 
-## 🧪 测试规范
+## 🧪 测试要求
 
-### 单元测试
+### **编写测试**
 
+- ✅ 新增功能必须添加测试
+- ✅ 修复 Bug 必须添加回归测试
+- ✅ 测试覆盖率不能降低
+
+**示例测试**:
 ```python
-import pytest
-from src.token_counter import TokenCounter
-
-def test_token_counter_gpt4():
-    counter = TokenCounter(model="gpt-4")
-    tokens = counter.count("Hello, world!")
+def test_token_counting():
+    """测试 Token 计数准确性"""
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"}
+    ]
+    
+    tokens = calculate_tokens(messages)
     assert tokens > 0
-
-def test_token_counter_invalid_model():
-    with pytest.raises(ValueError):
-        TokenCounter(model="invalid-model")
+    assert isinstance(tokens, int)
 ```
 
-### 集成测试
+### **运行测试**
 
-```python
-def test_full_rotation_workflow():
-    """测试完整的 session 轮换流程"""
-    # 1. 监控 context
-    # 2. 生成摘要
-    # 3. 创建新 session
-    # 4. 验证连续性
-    pass
+```bash
+# 运行所有测试
+bash run_tests.sh
+
+# 运行特定测试
+pytest tests/test_basic.py -v
+
+# 查看覆盖率
+pytest tests/ -v --cov=scripts --cov-report=html
 ```
 
 ---
 
 ## 📝 提交信息规范
 
-使用 [Conventional Commits](https://www.conventionalcommits.org/)：
+遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
 
-### 类型
+### **类型**
 
 - `feat`: 新功能
 - `fix`: Bug 修复
 - `docs`: 文档更新
 - `style`: 代码格式（不影响功能）
-- `refactor`: 重构
+- `refactor`: 代码重构
 - `test`: 测试相关
-- `chore`: 构建/工具/配置
+- `chore`: 构建/工具配置
 
-### 示例
-
-```bash
-feat: 添加交互式 CLI 模式
-
-- 实现 --interactive 参数
-- 添加用户输入验证
-- 更新帮助文档
-
-Closes #45
-```
+### **示例**
 
 ```bash
-fix: 修复 tiktoken 计数错误
+# ✅ 好的提交信息
+feat: 添加 LLM 摘要生成
+fix: 修复 Token 计数误差问题
+docs: 更新 README 安装说明
+test: 添加集成测试用例
+refactor: 优化摘要生成逻辑
 
-- 修正 f-string 转义问题
-- 添加边界测试用例
-
-Fixes #67
+# ❌ 避免的提交信息
+update code
+fix bug
+changes
 ```
+
+---
+
+## 🔍 代码审查
+
+### **审查标准**
+
+- ✅ 代码功能正确
+- ✅ 测试覆盖完整
+- ✅ 代码风格一致
+- ✅ 文档清晰完整
+- ✅ 性能影响可接受
+
+### **审查流程**
+
+1. 自动检查（CI/CD）
+2. 维护者审查
+3. 反馈和修改
+4. 合并到主分支
+
+---
+
+## 💬 社区行为准则
+
+### **我们的承诺**
+
+为了营造一个开放和友好的环境，我们承诺：
+
+- ✅ 尊重不同观点和经验
+- ✅ 接受建设性批评
+- ✅ 关注对社区最有利的事情
+- ✅ 对其他社区成员表示同理心
+
+### **不可接受的行为**
+
+- ❌ 使用性别化的语言或图像
+- ❌ 人身攻击或侮辱性评论
+- ❌ 公开或私下骚扰
+- ❌ 未经许可发布他人信息
+- ❌ 其他不道德或不专业的行为
+
+---
+
+## 🚀 开发环境设置
+
+### **1. 克隆项目**
 
 ```bash
-docs: 更新快速开始指南
+git clone https://github.com/HYYYY0C/infinity-context.git
+cd infinity-context
+```
 
-- 添加安装步骤截图
-- 补充常见问题
-- 优化示例代码
+### **2. 创建虚拟环境**
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate  # Windows
+```
+
+### **3. 安装依赖**
+
+```bash
+pip install -r requirements.txt
+pip install pytest pytest-cov flake8 black mypy
+```
+
+### **4. 验证安装**
+
+```bash
+# 运行测试
+bash run_tests.sh
+
+# 运行代码检查
+flake8 scripts/ tests/
+black --check scripts/ tests/
 ```
 
 ---
 
-## 🔍 Code Review 清单
+## 📚 资源
 
-### 提交前自查
-
-- [ ] 代码已格式化 (black)
-- [ ] 代码风格检查通过 (flake8)
-- [ ] 所有测试通过 (pytest)
-- [ ] 测试覆盖率 > 80%
-- [ ] 文档字符串完整
-- [ ] 类型注解完整
-- [ ] 提交信息规范
-
-### Reviewer 检查
-
-- [ ] 代码逻辑正确
-- [ ] 无性能问题
-- [ ] 无安全隐患
-- [ ] 测试充分
-- [ ] 文档完整
-
----
-
-## 🐛 报告 Bug
-
-### Bug 报告模板
-
-```markdown
-**描述问题**
-简洁描述问题
-
-**复现步骤**
-1. 执行 '...'
-2. 点击 '...'
-3. 看到错误 '...'
-
-**预期行为**
-应该发生什么
-
-**截图**
-如有，添加截图
-
-**环境信息**
-- OS: [e.g. Ubuntu 22.04]
-- Python: [e.g. 3.11]
-- Version: [e.g. v0.3.0]
-
-**日志**
-```
-错误日志内容
-```
-```
-
----
-
-## 💡 功能建议
-
-### 功能建议模板
-
-```markdown
-**功能描述**
-简洁描述建议的功能
-
-**使用场景**
-这个功能解决什么问题？
-
-**实现建议**
-如何实现？（可选）
-
-**替代方案**
-有其他解决方案吗？
-
-**额外信息**
-截图、示例等
-```
-
----
-
-## 🎯 当前优先任务
-
-查看 [Issues](https://github.com/HYYYY0C/infinity-context/issues) 中标记为：
-
-- 🔴 `high priority` - 高优先级
-- 🟢 `good first issue` - 适合新手
-- 💡 `enhancement` - 功能改进
-
-### 特别欢迎
-
-- ✅ 单元测试覆盖
-- ✅ 文档改进
-- ✅ 使用示例
-- ✅ 性能优化
-- ✅ 多语言翻译
-
----
-
-## 📞 联系方式
-
-- **GitHub Issues**: [提问/讨论](https://github.com/HYYYY0C/infinity-context/issues)
-- **GitHub Discussions**: [一般讨论](https://github.com/HYYYY0C/infinity-context/discussions)
-- **Email**: hyyyy0c@gmail.com
+- [Hermes Agent 文档](https://hermes-agent.nousresearch.com/docs)
+- [Python 风格指南](https://pep8.org/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [pytest 文档](https://pytest.org/)
+- [Black 文档](https://black.readthedocs.io/)
 
 ---
 
 ## 🙏 致谢
 
-感谢所有贡献者！🎉
+感谢所有为 Infinity Context 做出贡献的开发者！
 
-<a href="https://github.com/HYYYY0C/infinity-context/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=HYYYY0C/infinity-context" />
-</a>
+**每一个贡献都让我们的项目更好！** ❤️
 
 ---
-
-**Made with ❤️ by the Infinity Context Team**
 
 *"Infinite context, small model"*
