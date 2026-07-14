@@ -1,0 +1,6 @@
+# Hermes Session Rotator - 依赖包
+# v0.3.0 新增 tiktoken 用于准确 token 计数
+
+click>=8.0.0
+schedule>=1.1.0
+tiktoken>=0.5.0
