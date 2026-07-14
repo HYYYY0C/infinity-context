@@ -28,6 +28,26 @@ bash deploy_simple.sh
 
 ---
 
+## ⚠️ 系统要求
+
+### **必需**
+- ✅ Hermes Agent 环境（支持 `session_search`, `computer_use`, `send_message`）
+- ✅ Python 3.8+
+- ✅ `tiktoken` 库（`pip install tiktoken`）
+
+### **重要说明**
+- ⚠️ **本工具依赖 Hermes Agent 运行时**，无法在独立 Python 环境中运行
+- ⚠️ **`computer_use` 需要 Hermes 支持 GUI 自动化**，某些环境可能不可用
+- ⚠️ **摘要生成依赖 LLM API**，需要配置有效的模型
+
+### **降级方案**
+如果 `computer_use` 不可用：
+- 工具会提示手动执行 `/new`
+- 摘要仍会生成并保存
+- 用户手动注入摘要**
+
+---
+
 ## 💡 工作原理
 
 ```
