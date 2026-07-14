@@ -145,26 +145,46 @@ class LLMSummarizer:
         """
         调用 LLM API
         
-        ⚠️  当前版本使用伪代码，需要配置实际的 API
-        
-        支持的 API:
-        - OpenAI API
-        - Anthropic API
-        - 本地模型 (Ollama, vLLM 等)
+        自动检测并使用配置的 API：
+        1. 如果有 OPENAI_API_KEY，使用 OpenAI
+        2. 如果有 ANTHROPIC_API_KEY，使用 Anthropic
+        3. 如果本地有 Ollama，使用 Ollama
+        4. 否则使用模拟响应（测试用）
         """
-        # TODO: 实现实际的 API 调用
-        # 这里提供几个示例实现
+        import os
         
-        # 方案 1: OpenAI API
-        # return self._call_openai(user_prompt)
+        # 方案 1: 检测 OpenAI API Key
+        if os.getenv("OPENAI_API_KEY"):
+            print("💡 检测到 OpenAI API Key，使用 OpenAI API...")
+            try:
+                return self._call_openai(user_prompt)
+            except Exception as e:
+                print(f"⚠️  OpenAI API 调用失败：{str(e)}")
+                print("   回退到模拟响应...\n")
         
-        # 方案 2: Anthropic API
-        # return self._call_anthropic(user_prompt)
+        # 方案 2: 检测 Anthropic API Key
+        elif os.getenv("ANTHROPIC_API_KEY"):
+            print("💡 检测到 Anthropic API Key，使用 Anthropic API...")
+            try:
+                return self._call_anthropic(user_prompt)
+            except Exception as e:
+                print(f"⚠️  Anthropic API 调用失败：{str(e)}")
+                print("   回退到模拟响应...\n")
         
-        # 方案 3: 本地模型 (Ollama)
-        # return self._call_ollama(user_prompt)
+        # 方案 3: 检测本地 Ollama
+        else:
+            try:
+                import requests
+                response = requests.get("http://localhost:11434/api/tags", timeout=2)
+                if response.status_code == 200:
+                    print("💡 检测到本地 Ollama，使用 Ollama API...")
+                    return self._call_ollama(user_prompt)
+            except:
+                pass
         
-        # 临时方案：返回示例响应
+        # 方案 4: 模拟响应（测试用）
+        print("💡 未检测到 API 配置，使用模拟响应（测试模式）")
+        print("   配置 OPENAI_API_KEY 或 ANTHROPIC_API_KEY 以启用真实 LLM\n")
         return self._mock_response()
     
     def _call_openai(self, prompt: str) -> str:
