@@ -73,3 +73,6 @@ PROMOTION_CAMPAIGN.md
 test_*.py
 *_test.py
 .pytest_cache/
+
+# 但保留重要的测试文件
+!tests/test_*.py
