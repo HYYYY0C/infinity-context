@@ -42,8 +42,10 @@ MODEL_CONFIGS: Dict[str, Dict] = {
     "claude-sonnet-4": {"limit": 200000, "encoding": "cl100k_base"},
     
     # Meta Llama
-    "llama-3-8b": {"limit": 8192, "encoding": "cl100k_base"},
-    "llama-3-70b": {"limit": 8192, "encoding": "cl100k_base"},
+    "llama-3-8b": {"limit": 8192, "encoding": "cl100k_base"},       # Llama-3 (8K)
+    "llama-3-70b": {"limit": 8192, "encoding": "cl100k_base"},      # Llama-3 (8K)
+    "llama-3.1-8b": {"limit": 128000, "encoding": "cl100k_base"},   # Llama-3.1 (128K)
+    "llama-3.1-70b": {"limit": 128000, "encoding": "cl100k_base"},  # Llama-3.1 (128K)
     
     # Mistral
     "mistral-7b": {"limit": 8192, "encoding": "cl100k_base"},
