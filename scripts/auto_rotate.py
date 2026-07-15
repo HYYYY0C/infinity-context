@@ -110,10 +110,42 @@ def check_and_rotate():
     
     # 3. 获取会话
     try:
-        recent = session_search(limit=1)
-        messages = session_search(session_id=recent.id, window=RECENT_MESSAGES)
+        # session_search 返回 {"sessions": [...]} 格式
+        search_result = session_search(limit=1)
+        
+        # 检查是否有会话
+        if not search_result.get("sessions"):
+            print("❌ 无法读取会话：无会话数据")
+            return
+        
+        # 获取第一个会话的 ID
+        current_session_id = search_result["sessions"][0].get("id") or search_result["sessions"][0].get("session_id")
+        
+        if not current_session_id:
+            print("❌ 无法获取会话 ID")
+            return
+        
+        # 使用 session_id 读取消息（不能用 window，要用 around_message_id）
+        # 先读取最近的消息来获取上下文
+        messages_result = session_search(session_id=current_session_id)
+        
+        # messages_result 可能是 {"messages": [...]} 或直接是消息列表
+        if isinstance(messages_result, dict):
+            messages = messages_result.get("messages", [])
+        elif isinstance(messages_result, list):
+            messages = messages_result
+        else:
+            print(f"❌ 意外的消息格式：{type(messages_result)}")
+            return
+        
+        if not messages:
+            print("❌ 会话中没有消息")
+            return
+            
     except Exception as e:
         print(f"❌ 无法读取会话：{e}")
+        import traceback
+        traceback.print_exc()
         return
     
     # 4. 计算 Token
@@ -188,30 +220,53 @@ def check_and_rotate():
     
     # 7. 执行 /new
     print("✍️  执行 /new...")
-    try:
-        computer_use.click_element("输入框")
-        computer_use.type_text("/new")
-        computer_use.press_key("Enter")
-        time.sleep(2)
-        print("✅ 已执行 /new")
-    except Exception as e:
-        print(f"❌ 执行失败：{e}")
-        print("💡 请手动执行：/new")
-        return
     
-    # 8. 注入摘要
-    print("💉 注入摘要...")
+    # 检测 Computer Use 是否可用
+    computer_use_available = (
+        computer_use is not None and 
+        hasattr(computer_use, 'browser_snapshot') and
+        hasattr(computer_use, 'browser_click') and
+        hasattr(computer_use, 'browser_type') and
+        hasattr(computer_use, 'browser_press')
+    )
+    
+    if computer_use_available:
+        try:
+            # 获取页面快照找到输入框
+            from hermes_tools import browser_snapshot, browser_click, browser_type, browser_press
+            
+            snapshot = browser_snapshot()
+            # 查找输入框的 ref ID（通常是最后一个可输入元素）
+            # 这里简化处理，实际需要根据快照解析
+            print("⚠️  Computer Use 功能需要实现输入框定位逻辑")
+            print("💡 暂时请手动执行：/new")
+            
+            # TODO: 实现完整的 Computer Use 流程
+            # snapshot = browser_snapshot()
+            # 解析 snapshot 找到输入框的 ref ID
+            # browser_type(ref="@eX", text="/new")
+            # browser_press(key="Enter")
+            
+        except Exception as e:
+            print(f"❌ Computer Use 执行失败：{e}")
+            print("💡 请手动执行：/new")
+    else:
+        print("⚠️  Computer Use 不可用（Cron 环境限制）")
+        print("💡 请手动执行：/new")
+    
+    # 发送提醒消息
     try:
         send_message(f"""
-📋 **已自动恢复上下文**
+⚠️  **会话使用率超过 {USAGE_THRESHOLD:.0%}，建议切换新会话**
 
-{summary_text}
+📋 **摘要**：
+{summary_text[:500]}...
 
-我们可以继续了！
+💡 **请执行**：`/new` 开始新会话，然后说"继续"
 """)
-        print("✅ 切换完成")
+        print("✅ 已发送提醒消息")
     except Exception as e:
-        print(f"❌ 注入失败：{e}")
+        print(f"❌ 发送消息失败：{e}")
 
 
 if __name__ == "__main__":

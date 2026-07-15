@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Tests: 7/7 Passing](https://img.shields.io/badge/tests-7%2F7%20passing-brightgreen.svg)](tests/TEST_REPORT.md)
+[![Tests: 6/6 Passing](https://img.shields.io/badge/tests-6%2F6%20passing-brightgreen.svg)](tests/TEST_REPORT.md)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![小模型支持](https://img.shields.io/badge/小模型-4K 到 200K-blue)](docs/MODEL_SUPPORT.md)
 
@@ -26,6 +26,10 @@
 - ✅ 让 128K 模型获得 1M+ 的连续对话体验
 - ✅ **成本降低 90%，速度提升 3 倍**
 
+**定位**：
+- ✅ **适合**：接受半自动化、追求高质量摘要的用户
+- ⚠️ **不适合**：追求 100% 全自动化的用户（需要手动执行 `/new`）
+
 ---
 
 ## 🚀 快速开始
@@ -46,22 +50,28 @@ bash deploy_simple.sh    # 部署到 Hermes
 ## 💡 工作原理
 
 ```
-用户继续对话...
-    ↓
 [后台自动检测]
-使用率 > 80%？
+会话使用率 > 70-80%？
     ↓ 是
 [自动生成摘要]
 LLM 提取关键点 + 待办
     ↓
-[自动执行 /new]
-computer_use 模拟输入
+[发送提醒消息]
+⚠️ 建议使用率超过阈值，摘要已准备好
+    ↓
+[用户手动执行 /new]  ← 需要用户操作
     ↓
 [自动注入摘要]
 新会话恢复上下文
     ↓
-用户完全无感知 ✅
+用户可以继续对话 ✅
 ```
+
+**自动化程度**：
+- ✅ 自动检测使用率
+- ✅ 自动生成摘要
+- ✅ 自动发送提醒
+- ⚠️ **需要用户手动执行 `/new`**（Computer Use 功能待实现）
 
 ---
 
